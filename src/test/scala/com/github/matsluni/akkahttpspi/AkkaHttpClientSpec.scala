@@ -112,6 +112,23 @@ class AkkaHttpClientSpec extends AnyWordSpec with Matchers with OptionValues {
 
       akkaClient.connectionSettings shouldBe connectionPoolSettings
     }
+
+    "withConnectionPoolSettings().build() should use passed ConnectionPoolSettings" in {
+      val connectionPoolSettings = ConnectionPoolSettings(ConfigFactory.load())
+        .withConnectionSettings(
+          ClientConnectionSettings(ConfigFactory.load())
+            .withConnectingTimeout(1.second)
+            .withIdleTimeout(2.seconds)
+        )
+        .withMaxConnections(3)
+        .withMaxConnectionLifetime(4.seconds)
+      val akkaClient: AkkaHttpClient = new AkkaHttpAsyncHttpService().createAsyncHttpClientFactory()
+        .withConnectionPoolSettings(connectionPoolSettings)
+        .build()
+        .asInstanceOf[AkkaHttpClient]
+
+      akkaClient.connectionSettings shouldBe connectionPoolSettings
+    }
   }
 
   private def infiniteToZero(duration: scala.concurrent.duration.Duration): java.time.Duration = duration match {
