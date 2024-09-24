@@ -37,7 +37,6 @@ import software.amazon.awssdk.utils.AttributeMap
 
 import scala.collection.immutable
 import scala.jdk.CollectionConverters._
-import scala.compat.java8.DurationConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
@@ -142,12 +141,15 @@ object AkkaHttpClient {
   private[akkahttpspi] def buildConnectionPoolSettings(base: ConnectionPoolSettings,attributeMap: AttributeMap): ConnectionPoolSettings = {
     def zeroToInfinite(duration: java.time.Duration): scala.concurrent.duration.Duration =
       if (duration.isZero) scala.concurrent.duration.Duration.Inf
-      else duration.toScala
+      else toScala(duration)
+
+    def toScala(duration: java.time.Duration): scala.concurrent.duration.FiniteDuration =
+      scala.concurrent.duration.Duration.fromNanos(duration.toNanos)
 
     base
       .withUpdatedConnectionSettings(s =>
-        s.withConnectingTimeout(attributeMap.get(SdkHttpConfigurationOption.CONNECTION_TIMEOUT).toScala)
-          .withIdleTimeout(attributeMap.get(SdkHttpConfigurationOption.CONNECTION_MAX_IDLE_TIMEOUT).toScala)
+        s.withConnectingTimeout(toScala(attributeMap.get(SdkHttpConfigurationOption.CONNECTION_TIMEOUT)))
+          .withIdleTimeout(toScala(attributeMap.get(SdkHttpConfigurationOption.CONNECTION_MAX_IDLE_TIMEOUT)))
       )
       .withMaxConnections(attributeMap.get(SdkHttpConfigurationOption.MAX_CONNECTIONS).intValue())
       .withMaxConnectionLifetime(zeroToInfinite(attributeMap.get(SdkHttpConfigurationOption.CONNECTION_TIME_TO_LIVE)))
