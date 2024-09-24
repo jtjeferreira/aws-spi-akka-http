@@ -28,7 +28,6 @@ import software.amazon.awssdk.utils.AttributeMap
 
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
-import scala.jdk.DurationConverters._
 
 class AkkaHttpClientSpec extends AnyWordSpec with Matchers with OptionValues {
 
@@ -63,10 +62,10 @@ class AkkaHttpClientSpec extends AnyWordSpec with Matchers with OptionValues {
 
     "withConnectionPoolSettingsBuilderFromAttributeMap().buildWithDefaults() should propagate configuration options" in {
       val attributeMap = AttributeMap.builder()
-        .put(SdkHttpConfigurationOption.CONNECTION_TIMEOUT, 1.second.toJava)
-        .put(SdkHttpConfigurationOption.CONNECTION_MAX_IDLE_TIMEOUT, 2.second.toJava)
-        .put(SdkHttpConfigurationOption.MAX_CONNECTIONS, 3)
-        .put(SdkHttpConfigurationOption.CONNECTION_TIME_TO_LIVE, 4.second.toJava)
+        .put(SdkHttpConfigurationOption.CONNECTION_TIMEOUT, toJava(1.second))
+        .put(SdkHttpConfigurationOption.CONNECTION_MAX_IDLE_TIMEOUT, toJava(2.second))
+        .put(SdkHttpConfigurationOption.MAX_CONNECTIONS, Integer.valueOf(3))
+        .put(SdkHttpConfigurationOption.CONNECTION_TIME_TO_LIVE, toJava(4.second))
         .build()
       val akkaClient: AkkaHttpClient = new AkkaHttpAsyncHttpService().createAsyncHttpClientFactory()
         .withConnectionPoolSettingsBuilderFromAttributeMap()
@@ -86,9 +85,9 @@ class AkkaHttpClientSpec extends AnyWordSpec with Matchers with OptionValues {
         .asInstanceOf[AkkaHttpClient]
 
       akkaClient.connectionSettings.connectionSettings.connectingTimeout shouldBe
-        SdkHttpConfigurationOption.GLOBAL_HTTP_DEFAULTS.get(SdkHttpConfigurationOption.CONNECTION_TIMEOUT).toScala
+        toScala(SdkHttpConfigurationOption.GLOBAL_HTTP_DEFAULTS.get(SdkHttpConfigurationOption.CONNECTION_TIMEOUT))
       akkaClient.connectionSettings.connectionSettings.idleTimeout shouldBe
-        SdkHttpConfigurationOption.GLOBAL_HTTP_DEFAULTS.get(SdkHttpConfigurationOption.CONNECTION_MAX_IDLE_TIMEOUT).toScala
+        toScala(SdkHttpConfigurationOption.GLOBAL_HTTP_DEFAULTS.get(SdkHttpConfigurationOption.CONNECTION_MAX_IDLE_TIMEOUT))
       akkaClient.connectionSettings.maxConnections shouldBe
         SdkHttpConfigurationOption.GLOBAL_HTTP_DEFAULTS.get(SdkHttpConfigurationOption.MAX_CONNECTIONS).intValue()
       infiniteToZero(akkaClient.connectionSettings.maxConnectionLifetime) shouldBe
@@ -133,6 +132,14 @@ class AkkaHttpClientSpec extends AnyWordSpec with Matchers with OptionValues {
 
   private def infiniteToZero(duration: scala.concurrent.duration.Duration): java.time.Duration = duration match {
     case _: scala.concurrent.duration.Duration.Infinite => java.time.Duration.ZERO
-    case duration: FiniteDuration => duration.toJava
+    case duration: FiniteDuration => toJava(duration)
+  }
+
+  private def toJava(duration: scala.concurrent.duration.FiniteDuration): java.time.Duration = {
+    java.time.Duration.ofNanos(duration.toNanos)
+  }
+
+  private def toScala(duration: java.time.Duration): scala.concurrent.duration.FiniteDuration = {
+    scala.concurrent.duration.Duration.fromNanos(duration.toNanos)
   }
 }
